@@ -2,6 +2,8 @@
 
 A hiring-signal outreach agent in Python. It collects fresh hiring posts, filters out recruiters and roles that don't fit, researches each company, and drafts outreach in which every claim cites a source. A human approves every message, and Signal never sends anything itself.
 
+**Live:** https://signal-agent-uc26.onrender.com (review UI, password protected; free Render plan, so the first request after a quiet spell takes a moment to wake it).
+
 I built it because finding leads by hand took me about 500 LinkedIn posts for 10 qualified leads, plus 10 to 20 minutes per lead to research and write. The full plan is in [docs/PLAN.md](docs/PLAN.md).
 
 ## How it works
