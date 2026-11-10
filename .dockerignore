@@ -1,0 +1,14 @@
+.venv
+.git
+.mypy_cache
+.ruff_cache
+.pytest_cache
+data
+web
+tests
+evals
+docs
+**/__pycache__
+.env
+profiles/*/evidence.yaml
+!profiles/example/evidence.yaml

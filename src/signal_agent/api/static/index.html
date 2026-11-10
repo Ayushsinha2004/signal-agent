@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Signal review</title>
+<style>
+:root {
+  --bg: #f7f7f5; --panel: #ffffff; --ink: #1d1d1b; --muted: #6b6b66; --line: #e4e4df;
+  --accent: #2f5bd3; --ok: #1f7a4d; --warn: #a15c00; --bad: #b42318; --chip: #efefea;
+  --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #151514; --panel: #1e1e1c; --ink: #ececea; --muted: #9a9a94; --line: #33332f;
+          --accent: #7d9cf0; --ok: #5cc28d; --warn: #e3a64a; --bad: #f2786b; --chip: #2a2a27; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 system-ui, -apple-system, sans-serif; }
+header { display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: baseline; padding: 12px 16px;
+         border-bottom: 1px solid var(--line); background: var(--panel); position: sticky; top: 0; z-index: 2; }
+header h1 { font-size: 16px; margin: 0 12px 0 0; }
+.kpi { color: var(--muted); font-size: 13px; } .kpi b { color: var(--ink); font-variant-numeric: tabular-nums; }
+main { display: grid; grid-template-columns: minmax(280px, 380px) 1fr; min-height: calc(100vh - 50px); }
+@media (max-width: 860px) { main { grid-template-columns: 1fr; } #list { max-height: 40vh; } }
+#side { border-right: 1px solid var(--line); display: flex; flex-direction: column; min-width: 0; }
+.tabs { display: flex; flex-wrap: wrap; gap: 4px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+.tabs button { border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 999px;
+               padding: 3px 10px; font-size: 12px; cursor: pointer; }
+.tabs button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+#list { overflow: auto; flex: 1; }
+.row { padding: 10px 14px; border-bottom: 1px solid var(--line); cursor: pointer; }
+.row:hover { background: var(--chip); } .row[aria-current="true"] { background: var(--chip); box-shadow: inset 3px 0 var(--accent); }
+.row .t { font-weight: 600; } .row .s { color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#detail { padding: 16px 20px 80px; min-width: 0; }
+.empty { color: var(--muted); padding: 40px 0; text-align: center; }
+section { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; margin: 0 0 12px; }
+section h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 0 0 8px; }
+.chip { display: inline-block; background: var(--chip); border-radius: 4px; padding: 0 6px; margin: 0 4px 4px 0; font-size: 12px; }
+.ok { color: var(--ok); } .warn { color: var(--warn); } .bad { color: var(--bad); }
+pre.post { white-space: pre-wrap; font: 13px/1.5 var(--mono); margin: 0; max-height: 260px; overflow: auto; }
+label { display: block; font-size: 12px; color: var(--muted); margin: 8px 0 3px; }
+input[type=text], textarea { width: 100%; border: 1px solid var(--line); border-radius: 6px; background: var(--bg);
+                             color: var(--ink); padding: 7px 9px; font: inherit; }
+textarea { min-height: 220px; resize: vertical; } textarea.note { min-height: 60px; }
+.counter { float: right; font-variant-numeric: tabular-nums; }
+.btns { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+button.act { border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 6px; padding: 6px 12px;
+             cursor: pointer; font: inherit; }
+button.act.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+button.act.danger { color: var(--bad); }
+button.act:disabled { opacity: .5; cursor: default; }
+button.copy { font-size: 11px; padding: 1px 7px; margin-left: 6px; border: 1px solid var(--line); background: none;
+              color: var(--muted); border-radius: 4px; cursor: pointer; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+td, th { text-align: left; padding: 3px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-weight: 500; } td.n { text-align: right; font-variant-numeric: tabular-nums; }
+ul.claims { margin: 0; padding-left: 18px; } ul.claims li { margin-bottom: 4px; }
+.toast { position: fixed; bottom: 16px; right: 16px; background: var(--ink); color: var(--bg); padding: 8px 14px;
+         border-radius: 6px; opacity: 0; transition: opacity .2s; } .toast.on { opacity: 1; }
+a { color: var(--accent); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Signal review</h1>
+  <span class="kpi" id="kpis">loading…</span>
+  <span class="kpi" style="margin-left:auto"><a href="/api/export.csv">export approved CSV</a></span>
+</header>
+<main>
+  <div id="side">
+    <div class="tabs" id="tabs" role="toolbar" aria-label="Lead state"></div>
+    <div id="list" role="list"></div>
+  </div>
+  <div id="detail"><div class="empty">Pick a lead on the left.</div></div>
+</main>
+<div class="toast" id="toast" role="status"></div>
+<script>
+"use strict";
+// All data from posts is untrusted (public HN comments, career pages): build DOM with textContent only.
+const TABS = [["REVIEW", "Review"], ["APPROVED", "Approved"], ["SENT", "Sent"], ["REPLIED,INTERVIEW", "Replied"],
+              ["REJECTED", "Rejected"], ["FAILED", "Failed"], ["DEAD,DUPLICATE", "Closed"]];
+const EDIT_TAGS = ["tone", "wrong_fact", "too_long", "generic", "other"];
+let tab = TABS[0][0], current = null;
+
+function h(tag, attrs, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v == null || v === false) continue;
+    if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+    else if (k === "class") el.className = v;
+    else el.setAttribute(k, v === true ? "" : v);
+  }
+  for (const kid of kids.flat()) if (kid != null && kid !== false) el.append(kid instanceof Node ? kid : String(kid));
+  return el;
+}
+const money = (x) => x == null ? "–" : "$" + Number(x).toFixed(x < 0.1 ? 4 : 2);
+const ago = (iso) => { if (!iso) return ""; const d = (Date.now() - new Date(iso)) / 864e5; return d < 1 ? "today" : Math.round(d) + "d ago"; };
+function toast(msg) { const t = document.getElementById("toast"); t.textContent = msg; t.classList.add("on"); setTimeout(() => t.classList.remove("on"), 1800); }
+async function api(path, opts) {
+  const r = await fetch(path, { headers: { "content-type": "application/json" }, ...opts });
+  if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.detail || r.statusText); }
+  return r.status === 204 ? null : r.json();
+}
+function copyBtn(text, label) {
+  return h("button", { class: "copy", type: "button", onclick: async () => { await navigator.clipboard.writeText(text()); toast((label || "text") + " copied"); } }, "copy");
+}
+
+async function loadSummary() {
+  const s = await api("/api/summary");
+  const n = (k) => s.states[k] || 0;
+  const el = document.getElementById("kpis");
+  el.replaceChildren(
+    "to review ", h("b", {}, n("REVIEW")), " · approved ", h("b", {}, n("APPROVED")), " · sent ", h("b", {}, n("SENT")),
+    " · replied ", h("b", {}, n("REPLIED") + n("INTERVIEW")), " · LLM spend ", h("b", {}, money(s.spend_usd)),
+    " · median cost/lead ", h("b", {}, money(s.median_cost_per_lead_usd)),
+    " · median review ", h("b", {}, s.median_review_seconds == null ? "–" : Math.round(s.median_review_seconds) + "s"));
+}
+
+function renderTabs() {
+  document.getElementById("tabs").replaceChildren(...TABS.map(([key, label]) =>
+    h("button", { type: "button", "aria-pressed": String(key === tab), onclick: () => { tab = key; renderTabs(); loadList(); } }, label)));
+}
+
+async function loadList() {
+  const rows = await api("/api/leads?state=" + encodeURIComponent(tab));
+  const list = document.getElementById("list");
+  if (!rows.length) { list.replaceChildren(h("div", { class: "empty" }, "Nothing here.")); return; }
+  list.replaceChildren(...rows.map((r) => h("div", { class: "row", role: "listitem", "aria-current": String(r.id === current), onclick: () => openLead(r.id) },
+    h("div", { class: "t" }, r.company || "(not normalised)", " ",
+      r.verified === "false" ? h("span", { class: "warn", title: "draft failed verification" }, "⚑") : null,
+      r.stretch ? h("span", { class: "chip warn", title: "senior or more years than your core range" }, "stretch") : null),
+    h("div", { class: "s" }, [(r.roles || []).join(", "), r.location, ago(r.posted_at)].filter(Boolean).join(" · ")),
+    r.reject_reason ? h("div", { class: "s" }, r.reject_reason) : null)));
+}
+
+async function openLead(id) {
+  current = id;
+  document.querySelectorAll(".row").forEach((el) => el.setAttribute("aria-current", "false"));
+  const data = await api("/api/leads/" + id);
+  api("/api/leads/" + id + "/view", { method: "POST" }).catch(() => {});
+  renderDetail(data);
+  loadList();
+}
+
+function why(lead) {
+  const rv = lead.rule_verdict || {}, fit = lead.fit;
+  return h("section", {}, h("h2", {}, "Why this lead"),
+    lead.reject_reason ? h("p", { class: lead.state === "REVIEW" ? "warn" : "bad" }, lead.reject_reason) : null,
+    (rv.reasons || []).length ? h("div", {}, "Rules: ", rv.reasons.map((r) => h("span", { class: "chip" }, r))) : null,
+    (rv.flags || []).length ? h("div", {}, "Flags: ", rv.flags.map((r) => h("span", { class: "chip warn" }, r))) : null,
+    fit ? h("div", {}, h("span", { class: "chip" }, fit.role_family), h("span", { class: "chip" }, "India: " + fit.india_eligible),
+      h("span", { class: "chip" }, "confidence " + Number(fit.confidence).toFixed(2)), h("p", {}, fit.rationale)) : null);
+}
+
+function facts(lead) {
+  const f = lead.facts; if (!f) return null;
+  const emails = (f.contact && f.contact.emails) || [];
+  return h("section", {}, h("h2", {}, "Post facts"),
+    h("div", {}, h("b", {}, f.company), f.company_domain ? " · " + f.company_domain : "", " · ", (f.roles || []).join(", ")),
+    h("div", {}, f.location_text, " · ", f.seniority, f.years_min != null ? " · " + f.years_min + "+ yrs" : "", f.salary_text ? " · " + f.salary_text : ""),
+    h("div", {}, (f.stack || []).map((s) => h("span", { class: "chip" }, s))),
+    emails.length ? h("div", {}, "Email (from the post): ", emails.join(", "), copyBtn(() => emails.join(", "), "email")) : null,
+    (f.contact && f.contact.apply_urls || []).map((u) => h("div", {}, h("a", { href: u, target: "_blank", rel: "noopener noreferrer" }, u))));
+}
+
+function brief(lead, evidence) {
+  const b = lead.brief, m = lead.match;
+  const ev = Object.fromEntries((evidence || []).map((e) => [e.id, e]));
+  return [
+    b ? h("section", {}, h("h2", {}, "Company brief", b.complete ? "" : " (incomplete)"),
+      h("p", {}, b.what_they_build), b.stage_or_size ? h("p", {}, b.stage_or_size) : null,
+      b.recent_signal ? h("p", {}, "Recent: ", b.recent_signal) : null,
+      h("div", {}, (b.ai_stack || []).map((s) => h("span", { class: "chip" }, s))),
+      h("ul", { class: "claims" }, (b.sources || []).map((s) => h("li", {}, h("a", { href: s.url, target: "_blank", rel: "noopener noreferrer" }, s.url), " · ", s.note)))) : null,
+    m ? h("section", {}, h("h2", {}, "Requirement → evidence"),
+      h("table", {}, h("tr", {}, h("th", {}, "Requirement"), h("th", {}, "Evidence")),
+        m.matches.map((x) => h("tr", {}, h("td", {}, x.requirement), h("td", {}, x.evidence_ids.map((id) => h("span", { class: "chip", title: ev[id] ? ev[id].text : "" }, id)))))),
+      m.gaps.length ? h("p", { class: "warn" }, "Gaps: " + m.gaps.join("; ")) : null) : null];
+}
+
+function draftEditor(data) {
+  const lead = data.lead, d = data.drafts[data.drafts.length - 1];
+  if (!d) return { el: null, save: null };
+  const editable = ["REVIEW", "APPROVED"].includes(lead.state);
+  const v = d.verification || {};
+  const subject = h("input", { type: "text", value: d.subject || "", disabled: !editable });
+  const body = h("textarea", { disabled: !editable }); body.value = d.edited_body || d.body;
+  const note = h("textarea", { class: "note", disabled: !editable }); note.value = d.connection_note || "";
+  const counter = h("span", { class: "counter" });
+  const count = () => { counter.textContent = note.value.length + "/300"; counter.className = "counter " + (note.value.length > 300 ? "bad" : ""); };
+  note.addEventListener("input", count); count();
+  const save = async () => {
+    const r = await api("/api/leads/" + lead.id + "/draft", { method: "PUT", body: JSON.stringify({ subject: subject.value, body: body.value, connection_note: note.value }) });
+    toast(r.changed ? "edit saved" : "no change"); return r;
+  };
+  const judge = v.judge;
+  const el = h("section", {}, h("h2", {}, "Draft v" + d.version + " · " + d.channel, d.edited_body ? " · edited" : ""),
+    h("div", {}, h("span", { class: v.passed ? "ok" : "bad" }, v.passed ? "verified" : "failed verification"),
+      " · grounded " + Math.round((v.grounded_pct || 0) * 100) + "%",
+      judge ? ` · judge relevance ${judge.relevance} specificity ${judge.specificity} tone ${judge.tone} honesty ${judge.honesty}` : ""),
+    (v.problems || []).length ? h("ul", { class: "claims bad" }, v.problems.map((p) => h("li", {}, p))) : null,
+    judge && judge.feedback ? h("p", { class: "kpi" }, "Judge: " + judge.feedback) : null,
+    h("label", {}, "Subject", copyBtn(() => subject.value, "subject")), subject,
+    h("label", {}, "Message", copyBtn(() => body.value, "message")), body,
+    h("label", {}, "Connection note", counter, copyBtn(() => note.value, "note")), note,
+    h("details", {}, h("summary", {}, "Claims and citations (" + d.claims.length + ")"),
+      h("ul", { class: "claims" }, d.claims.map((c) => h("li", {}, c.text, " → ",
+        c.evidence_id ? h("span", { class: "chip" }, c.evidence_id) : c.source_url ? h("a", { href: c.source_url, target: "_blank", rel: "noopener noreferrer" }, "source") : h("span", { class: "bad" }, "uncited"))))),
+    editable ? h("div", { class: "btns" }, h("button", { class: "act", type: "button", onclick: save }, "Save edit")) : null);
+  return { el, save: editable ? save : null };
+}
+
+function actions(data, saveDraft) {
+  const lead = data.lead; if (!data.actions.length) return null;
+  const note = h("input", { type: "text", placeholder: "note (optional; used as the reason on reject / dead)" });
+  const tags = EDIT_TAGS.map((t) => h("label", { style: "display:inline-flex;gap:4px;margin-right:10px" }, h("input", { type: "checkbox", value: t }), t));
+  const replyKind = h("select", {}, ["positive", "neutral", "negative"].map((k) => h("option", { value: k }, k)));
+  const labels = { approve: "Approve", reject: "Reject", redraft: "Re-run research + draft", sent: "Mark sent", replied: "Mark replied",
+                   interview: "Interview", dead: "Dead", rescue: "Rescue to review", retry: "Retry pipeline" };
+  const run = async (action, btn) => {
+    btn.disabled = true;
+    try {
+      if (action === "approve" && saveDraft) await saveDraft();
+      const payload = { action, note: note.value || null };
+      if (action === "approve") payload.tags = tags.map((l) => l.querySelector("input")).filter((i) => i.checked).map((i) => i.value);
+      if (action === "replied") payload.reply_kind = replyKind.value;
+      const r = await api("/api/leads/" + lead.id + "/action", { method: "POST", body: JSON.stringify(payload) });
+      toast(labels[action] + " → " + r.state);
+      await Promise.all([loadSummary(), loadList()]);
+      openLead(lead.id);
+    } catch (e) { toast(e.message); btn.disabled = false; }
+  };
+  return h("section", {}, h("h2", {}, "Decision"),
+    data.actions.includes("approve") ? h("div", {}, h("label", {}, "What did you have to fix? (tags the edit for the weekly prompt review)"), tags) : null,
+    data.actions.includes("replied") ? h("div", {}, h("label", {}, "Reply kind"), replyKind) : null,
+    note,
+    h("div", { class: "btns" }, data.actions.map((a) => {
+      const b = h("button", { class: "act" + (["approve", "sent"].includes(a) ? " primary" : ["reject", "dead"].includes(a) ? " danger" : ""), type: "button" }, labels[a]);
+      b.addEventListener("click", () => run(a, b)); return b;
+    })));
+}
+
+function trace(data) {
+  if (!data.steps.length) return null;
+  const total = data.steps.reduce((a, s) => a + (s.cost_usd || 0), 0), ms = data.steps.reduce((a, s) => a + (s.latency_ms || 0), 0);
+  return h("section", {}, h("details", {}, h("summary", {}, `Trace · ${data.steps.length} steps · ${money(total)} · ${(ms / 1000).toFixed(1)}s · trace ${data.lead.trace_id.slice(0, 8)}`),
+    h("table", {}, h("tr", {}, ["stage", "status", "model", "in", "out", "cost", "ms"].map((c) => h("th", {}, c))),
+      data.steps.map((s) => h("tr", {}, h("td", {}, s.stage), h("td", { class: s.status === "ok" ? "ok" : "bad", title: s.error || "" }, s.status),
+        h("td", {}, s.model || ""), h("td", { class: "n" }, s.input_tokens), h("td", { class: "n" }, s.output_tokens),
+        h("td", { class: "n" }, money(s.cost_usd)), h("td", { class: "n" }, s.latency_ms))))));
+}
+
+function history(data) {
+  const ev = data.events.filter((e) => e.action !== "view");
+  if (!ev.length && !data.outcome) return null;
+  return h("section", {}, h("h2", {}, "History"),
+    h("ul", { class: "claims" }, ev.map((e) => h("li", {}, new Date(e.created_at).toLocaleString(), " · ", e.action,
+      e.to_state ? ` → ${e.to_state}` : "", e.detail.note ? " · " + e.detail.note : "",
+      e.detail.diff ? h("pre", { class: "post" }, e.detail.diff) : null))));
+}
+
+function renderDetail(data) {
+  const lead = data.lead;
+  const editor = draftEditor(data);
+  document.getElementById("detail").replaceChildren(
+    h("div", { style: "display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:10px" },
+      h("h2", { style: "margin:0;font-size:18px" }, (lead.facts && lead.facts.company) || "Lead " + lead.id),
+      h("span", { class: "chip" }, lead.state), h("span", { class: "kpi" }, lead.source + " · " + ago(lead.posted_at) + " · " + money(lead.cost_usd)),
+      lead.url ? h("a", { href: lead.url, target: "_blank", rel: "noopener noreferrer" }, "open post") : null),
+    actions(data, editor.save), editor.el, why(lead), facts(lead), brief(lead, data.evidence),
+    h("section", {}, h("details", {}, h("summary", {}, "Original post"), h("pre", { class: "post" }, lead.text))),
+    history(data), trace(data));
+}
+
+renderTabs(); loadList(); loadSummary();
+</script>
+</body>
+</html>

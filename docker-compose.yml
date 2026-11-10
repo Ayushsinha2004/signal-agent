@@ -1,0 +1,17 @@
+# Isolated from every other project on this machine: own compose project, own volume, own port.
+name: signal-agent
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: signal
+      POSTGRES_PASSWORD: signal-local-only
+      POSTGRES_DB: signal
+    ports: ["127.0.0.1:55433:5432"]
+    volumes: ["signal_pgdata:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U signal -d signal"]
+      interval: 2s
+      retries: 30
+volumes:
+  signal_pgdata:

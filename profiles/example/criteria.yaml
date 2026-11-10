@@ -1,0 +1,14 @@
+# What a lead must look like for Ayush (remote from Mumbai, nearly 2 years, AI/full-stack).
+home_country: IN
+max_years_required: 4
+max_age_days: 15
+role_keywords: [ai, llm, agent, agentic, genai, machine learning, ml, full stack, full-stack, fullstack,
+                backend, python, typescript, automation, n8n, rag, applied ai, founding engineer]
+reject_seniority: [staff_plus]
+stretch_seniority: [senior]   # drafted but flagged "stretch" in review
+stretch_max_years: 7
+recruiter_markers: [recruiter, recruiting for, staffing, talent acquisition, on behalf of our client,
+                    for our client, hiring for a client, placement, headhunt, rpo]
+blocked_location_markers: [us only, us-only, u.s. only, usa only, us citizens, us based, us-based only,
+                           must be located in the us, united states only, us residents only, canada only, uk only, eu only, europe only, onsite only,
+                           on-site only, in-office, security clearance, americas only, latam only]

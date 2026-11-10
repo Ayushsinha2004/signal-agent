@@ -1,0 +1,13 @@
+name: Example Candidate
+facts: {years_experience: "3"}
+evidence:
+  - id: ex-agents
+    org: Example Co
+    text: Built LLM agents with tool calling and Postgres chat memory in 12 production workflows.
+    metrics: ["12 production workflows"]
+    skills: [AI Agents, Tool Calling, PostgreSQL]
+  - id: ex-eval
+    org: Example Co
+    text: Wrote a 50-question eval harness for a RAG assistant that answered 46 of 50 correctly.
+    metrics: ["50-question", "46 of 50"]
+    skills: [LLM Evaluation, Retrieval-Augmented Generation (RAG)]

@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+node_modules/
+web/dist/
+data/cache/
+*.log
+# personal evidence banks stay local (they reference private client work)
+profiles/*/evidence.yaml
+!profiles/example/evidence.yaml
+
+# judge calibration set: my real messages name real people
+evals/data/private/

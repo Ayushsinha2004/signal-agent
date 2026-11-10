@@ -1,0 +1,29 @@
+# Render Blueprint: the review UI (Docker) plus Postgres. Secrets are set in the Render dashboard, not here.
+# Private files go in as Secret Files: evidence.yaml (and optionally denylist.txt), mounted at /etc/secrets.
+services:
+  - type: web
+    name: signal-agent
+    runtime: docker
+    plan: free
+    healthCheckPath: /healthz
+    autoDeploy: true
+    envVars:
+      - key: SIGNAL_DATABASE_URL
+        fromDatabase:
+          name: signal-db
+          property: connectionString
+      - key: SIGNAL_UI_PASSWORD
+        generateValue: true
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: SIGNAL_PROFILE
+        value: ayush
+      - key: SIGNAL_EVIDENCE_FILE
+        value: /etc/secrets/evidence.yaml
+      - key: SIGNAL_DENYLIST_FILE
+        value: /etc/secrets/denylist.txt
+databases:
+  - name: signal-db
+    databaseName: signal
+    user: signal
+    plan: free

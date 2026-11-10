@@ -1,0 +1,79 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      live_eval:
+        description: "Run the live-model qualify eval (spends API credit)"
+        type: boolean
+        default: false
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: lint, types, tests, rules eval
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: signal
+          POSTGRES_PASSWORD: signal-local-only
+          POSTGRES_DB: signal
+        ports: ["55433:5432"]
+        options: >-
+          --health-cmd "pg_isready -U signal -d signal"
+          --health-interval 2s --health-timeout 5s --health-retries 30
+    env:
+      SIGNAL_DATABASE_URL: postgresql://signal:signal-local-only@127.0.0.1:55433/signal
+      SIGNAL_TEST_DATABASE_URL: postgresql://signal:signal-local-only@127.0.0.1:55433/signal
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --locked
+      - name: ruff
+        run: uv run ruff check src tests evals scripts
+      - name: mypy
+        run: uv run mypy src
+      - name: migrations apply cleanly
+        run: uv run signal migrate
+      - name: tests (fake model, real Postgres)
+        run: uv run pytest -q
+      - name: rules eval gate (free, deterministic)
+        run: uv run python evals/run_evals.py --stage rules
+
+  live-eval:
+    # Live-model eval: on demand, or when prompts / pipeline / model code change on a PR.
+    # Skips itself when the repository has no ANTHROPIC_API_KEY secret (forks, first setup).
+    name: qualify eval (live model)
+    needs: check
+    runs-on: ubuntu-latest
+    if: >-
+      (github.event_name == 'workflow_dispatch' && inputs.live_eval) ||
+      (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'eval'))
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --locked
+      - name: qualify eval gate
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "::notice::ANTHROPIC_API_KEY secret not set; skipping the live eval"
+            exit 0
+          fi
+          uv run python evals/run_evals.py --stage qualify

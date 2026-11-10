@@ -1,0 +1,72 @@
+name: nightly
+
+# Collect new posts and advance leads against the deployed database, once a day after the free model quota
+# resets (00:00 UTC). Skips itself until the repository secrets below are set.
+#   SIGNAL_DATABASE_URL   the Render Postgres external connection string
+#   OPENROUTER_API_KEY    model key
+#   EVIDENCE_YAML_B64     base64 of profiles/<name>/evidence.yaml (private, never committed)
+#   DENYLIST_TXT          optional: client names that must never appear in a draft, one per line
+
+on:
+  schedule:
+    - cron: "30 0 * * *"
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "max leads to advance"
+        default: "40"
+
+concurrency:
+  group: nightly
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      SIGNAL_DATABASE_URL: ${{ secrets.SIGNAL_DATABASE_URL }}
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      SIGNAL_EVIDENCE_FILE: /tmp/signal-evidence.yaml
+      SIGNAL_DENYLIST_FILE: /tmp/signal-denylist.txt
+    steps:
+      - name: check secrets
+        id: ready
+        run: |
+          if [ -z "$SIGNAL_DATABASE_URL" ] || [ -z "$OPENROUTER_API_KEY" ]; then
+            echo "::notice::nightly secrets not set; skipping"; echo "ok=false" >> "$GITHUB_OUTPUT"
+          else echo "ok=true" >> "$GITHUB_OUTPUT"; fi
+      - if: steps.ready.outputs.ok == 'true'
+        uses: actions/checkout@v4
+      - if: steps.ready.outputs.ok == 'true'
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - if: steps.ready.outputs.ok == 'true'
+        run: uv sync --locked
+      - if: steps.ready.outputs.ok == 'true'
+        name: private profile files
+        env:
+          EVIDENCE_YAML_B64: ${{ secrets.EVIDENCE_YAML_B64 }}
+          DENYLIST_TXT: ${{ secrets.DENYLIST_TXT }}
+        run: |
+          echo "$EVIDENCE_YAML_B64" | base64 -d > "$SIGNAL_EVIDENCE_FILE"
+          printf '%s\n' "$DENYLIST_TXT" > "$SIGNAL_DENYLIST_FILE"
+      - if: steps.ready.outputs.ok == 'true'
+        name: restore model reply cache
+        uses: actions/cache@v4
+        with:
+          path: data/cache/llm
+          key: llm-cache-${{ github.run_id }}
+          restore-keys: llm-cache-
+      - if: steps.ready.outputs.ok == 'true'
+        run: uv run signal migrate
+      - if: steps.ready.outputs.ok == 'true'
+        run: uv run signal collect --source hn
+      - if: steps.ready.outputs.ok == 'true'
+        run: uv run signal run --limit "${{ inputs.limit || '40' }}"
+      - if: steps.ready.outputs.ok == 'true'
+        run: uv run signal funnel

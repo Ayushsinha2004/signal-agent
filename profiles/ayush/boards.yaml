@@ -1,0 +1,7 @@
+# Public job boards for `signal collect --source ats`. Each board was checked on 2026-11-10 to exist and list jobs.
+# Kept short on purpose: every new post that passes the free rules costs a model call, and the free tier
+# allows 50 a day. Remote-first, AI-relevant, mostly small teams (big multi-office boards are mostly onsite noise).
+ashby: [langchain, llamaindex, n8n, posthog, supabase, e2b, browserbase, mem0, vapi, resend, weaviate, pinecone,
+        zapier]
+greenhouse: [gitlab, grafanalabs, automatticcareers]
+lever: []
