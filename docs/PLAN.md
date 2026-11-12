@@ -176,7 +176,7 @@ create table eval_runs (
   created_at timestamptz default now());
 ```
 
-Migrations are hand-written SQL files in `migrations/`, applied with a small runner (no ORM magic). That's the same discipline I used for the 58 migrations at Maxtel.
+Migrations are hand-written SQL files in `migrations/`, applied with a small runner (no ORM magic). That's the same discipline I used for 58 hand-written migrations on a production service.
 
 ---
 
